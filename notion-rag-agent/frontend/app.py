@@ -54,7 +54,7 @@ BACKEND_URL_EXTERNAL = "http://localhost:8000"
 
 TIMEOUT_SHORT  = 5
 TIMEOUT_NORMAL = 10
-TIMEOUT_LONG   = 180    # LLM 응답 대기 — 동기화 중에는 Ollama 가 느려질 수 있음
+TIMEOUT_LONG   = 600    # LLM 응답 대기 — 동기화 중에는 Ollama 가 느려질 수 있음
 
 APP_TITLE = "Notion RAG"
 APP_ICON  = "✦"

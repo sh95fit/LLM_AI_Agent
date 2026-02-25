@@ -7,6 +7,7 @@ services:
     environment:
       - OLLAMA_NUM_PARALLEL=4        # 동시 요청 수 (기본값 1)
       - OLLAMA_MAX_LOADED_MODELS=2   # 동시 로드 모델 수
+      - OLLAMA_KEEP_ALIVE=30m        # 모델을 30분간 메모리에 유지
     container_name: notion-rag-ollama
     ports:
       - "11434:11434"
