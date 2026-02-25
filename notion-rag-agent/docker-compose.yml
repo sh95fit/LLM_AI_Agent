@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  # 1. Ollama (AI 모델 서버)
+  ollama:
+    image: ollama/ollama:latest
+    environment:
+      - OLLAMA_NUM_PARALLEL=4        # 동시 요청 수 (기본값 1)
+      - OLLAMA_MAX_LOADED_MODELS=2   # 동시 로드 모델 수
+    container_name: notion-rag-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # 2. Qdrant (벡터 데이터베이스)
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: notion-rag-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # 3. Redis (캐시 및 세션 저장소)
+  redis:
+    image: redis:7-alpine
+    container_name: notion-rag-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # 4. MySQL (사용자 인증 DB)
+  mysql:
+    image: mysql:8.0
+    container_name: notion-rag-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: notion_rag
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # 5. Backend (FastAPI)
+  backend:
+    build: ./backend
+    container_name: notion-rag-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      qdrant:
+        condition: service_started
+      ollama:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+  # 6. Frontend (Streamlit)
+  frontend:
+    build: ./frontend
+    container_name: notion-rag-frontend
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+    restart: unless-stopped
+    networks:
+      - rag-network
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  qdrant_data:
+  redis_data:
+  mysql_data:
