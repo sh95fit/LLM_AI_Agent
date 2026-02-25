@@ -78,7 +78,7 @@ class NotionService:
         # ── Notion API 공통 헤더 ─────────────────────────────────
         self.headers = {
             "Authorization": f"Bearer {self.token}",
-            "Notion-Version": "2022-06-28",
+            "Notion-Version": "2026-02-25",
             "Content-Type": "application/json",
         }
 
